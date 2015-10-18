@@ -3,7 +3,13 @@ import {createStore} from 'redux';
 import {Map} from 'immutable';
 import marky from 'marky-markdown';
 
-const INITIAL_STATE = Map({ input: '', output: '' });
+const INITIAL_STATE = Map({
+  input: Map({
+    value: '',
+    caret: 0
+  }),
+  output: ''
+});
 
 // io is a reference to the socket.io server running
 const io = new Server().attach(8090);
@@ -14,8 +20,11 @@ export function initialize() {
 }
 
 // convert handles converting an input markdown string to its HTML couterpart
-export function convert(state, input) {
-  return state.set('input', input).set('output', marky(input).html());
+export function convert(state, input, caret) {
+  return state
+          .setIn(['input', 'value'], input)
+          .setIn(['input', 'caret'], caret)
+          .set('output', marky(input).html());
 }
 
 // reducer handles action events passed to our server running the correct
@@ -25,7 +34,7 @@ export function reducer(state, action) {
   case 'INITIALIZE':
     return initialize();
   case 'CONVERT':
-    return convert(state, action.input);
+    return convert(state, action.input, action.caret);
   }
   return state;
 }
@@ -33,7 +42,6 @@ export function reducer(state, action) {
 // store is the reference to our Redux store.
 const store = createStore(reducer);
 
-// We subscribe the store to the server emitting the state on actions
 store.subscribe(
   () => io.emit('state', store.getState().toJS())
 );
